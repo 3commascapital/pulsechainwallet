@@ -23,6 +23,7 @@ import type { NonceData } from '$common/wallets'
 import type { PathTypes } from '$common/path'
 import type { Proof } from '$common/pools'
 import type { SQLQueryKeys } from './sql'
+import { AddressMetadata } from './validation'
 
 /**
  * Result interface for wallet removal operations
@@ -64,6 +65,7 @@ export interface API {
   'state:block': (chainId: ChainIds) => Block | null
   'state:price': (token: Erc20Token, blockTag: BlockTag | bigint) => bigint | null
   'state:balance': (chainId: ChainIds, address: Hex, token: Erc20Token) => bigint
+  'state:addressInfo': (chainId: ChainIds, address: Hex) => AddressMetadata | null
 
   'indexer:start': () => void
   'indexer:stop': () => boolean

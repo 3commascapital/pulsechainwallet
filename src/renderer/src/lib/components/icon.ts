@@ -1,6 +1,6 @@
 export const allIconKeys = new Map<string, Set<string>>(
   Object.entries({
-    'material-symbols': new Set(['refresh', 'search', 'delete', 'check', 'chevron-right']),
+    'material-symbols': new Set(['refresh', 'search', 'delete', 'check', 'chevron-right', 'warning-outline']),
     'material-symbols-light': new Set(['connect-without-contact']),
     'svg-spinners': new Set(['3-dots-bounce']),
     fa: new Set([
@@ -19,6 +19,7 @@ export const allIconKeys = new Map<string, Set<string>>(
       'key',
     ]),
     'icon-park-outline': new Set(['file-success-one']),
+    'icon-park-solid': new Set(['error']),
     'gravity-ui': new Set(['circle-chevron-right']),
     mdi: new Set([
       'eye-lock-open-outline',
