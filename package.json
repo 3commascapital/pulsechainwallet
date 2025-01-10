@@ -38,7 +38,7 @@
     "@ethersproject/solidity": "^5.7.0",
     "@floating-ui/dom": "^1.6.11",
     "@iconify/svelte": "^4.0.2",
-    "@pulsechain/msgboard": "file:./local_modules/@pulsechain/msgboard",
+    "@pulsechain/msgboard": "^0.0.23",
     "@skeletonlabs/skeleton": "^2.10.2",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.15",
