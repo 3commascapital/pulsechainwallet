@@ -61,7 +61,27 @@ export const loopQuery = async <T = unknown>(queryKey: QueryKey, accessKey: stri
   return _.flatten(collection)
 }
 
-handle('indexer:start', start)
+/**
+ * IPC handler for starting the indexer
+ * @dev Changed from direct function reference to async arrow function
+ *
+ * Before:
+ * handle('indexer:start', start)
+ *
+ * After:
+ * handle('indexer:start', async () => {
+ *   return start()
+ * })
+ *
+ * @notice This change ensures proper async/await handling in the IPC context
+ * @notice Provides more explicit Promise resolution
+ * @returns Promise from the start() function
+ * @throws Propagates any errors from the start() function
+ */
+handle('indexer:start', async () => {
+  return start()
+})
+
 handle('indexer:stop', stop)
 handle('indexer:restart', restart)
 

@@ -476,7 +476,7 @@ handle('pool:nullifiedCommitmentIndices', nullifiedCommitmentIndices)
 
 handle('pool:generateProofsAndCache', generateProofsAndCache)
 
-handle('proof:all', () => {
+handle('proof:all', async () => {
   return sql.query.all<Proof>('PROOF_ALL')
 })
 

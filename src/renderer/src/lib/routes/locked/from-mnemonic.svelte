@@ -37,14 +37,12 @@
         console.log('from-mnemonic /locked')
         goto('/locked')
       }}
-      on:valid-phrase={handleValidPhrase}
-    />
+      on:valid-phrase={handleValidPhrase} />
   {:else}
     <Password
       on:cancel={() => {
         phrase = null
       }}
-      on:submit={handleSubmitPassword}
-    />
+      on:submit={handleSubmitPassword} />
   {/if}
 </div>

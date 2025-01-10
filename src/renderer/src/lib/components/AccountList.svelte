@@ -14,37 +14,94 @@
   import * as api from '$lib/api'
   import { contactByAddress } from '$lib/contacts'
 
-  export let walletId!: Hex
   export let currentAddress!: Hex
   export let accounts!: Account[]
   export let itemButtons: string[] = ['showPK', 'copy']
+  export let walletId: Hex | undefined = undefined
 
-  let wallet: WalletMetadata | null = null
+  // Create a map to store wallet metadata for each account
+  let walletMetadataMap: Map<Hex, WalletMetadata | null> = new Map()
+
+  /**
+   * @dev Changes from single wallet reference to multi-wallet map structure
+   *
+   * Before:
+   * - Single wallet metadata storage
+   * - Simple promise chain for fetching
+   * - No error handling
+   * @code
+   * let wallet: WalletMetadata | null = null
+   * $: {
+   *   const known = $wallets.find((w) => w.id === walletId)
+   *   if (known) {
+   *     wallet = known
+   *   } else {
+   *     api.wallet.get(walletId).then((w) => {
+   *       wallet = w
+   *     })
+   *   }
+   * }
+   *
+   * After:
+   * - Map-based metadata storage for multiple wallets
+   * - Reactive updates for all accounts
+   * - Proper error handling
+   * - Manual reactivity triggers
+   * - Helper function for safe access
+   *
+   * @notice Changes improve:
+   * 1. Multi-wallet support
+   * 2. Error resilience
+   * 3. State management
+   * 4. Type safety
+   *
+   * @dev Manual reactivity triggers needed due to Map mutations
+   */
   $: {
-    const known = $wallets.find((w) => w.id === walletId)
-    if (known) {
-      wallet = known
-    } else {
-      api.wallet.get(walletId).then((w) => {
-        wallet = w
-      })
-    }
+    accounts.forEach(async (account) => {
+      const id = walletId || account.wallet_id
+      const known = $wallets.find((w) => w.id === id)
+      if (known) {
+        walletMetadataMap.set(id, known)
+        walletMetadataMap = walletMetadataMap // Trigger reactivity
+      } else {
+        try {
+          const w = await api.wallet.get(id)
+          walletMetadataMap.set(id, w)
+          walletMetadataMap = walletMetadataMap // Trigger reactivity
+        } catch (e) {
+          console.error('Failed to fetch wallet metadata:', e)
+          walletMetadataMap.set(id, null)
+          walletMetadataMap = walletMetadataMap // Trigger reactivity
+        }
+      }
+    })
+  }
+
+  // Helper function to get wallet metadata with proper type handling
+  const getWalletMetadata = (id: Hex): WalletMetadata | null => {
+    return walletMetadataMap.get(id) || null
   }
 
   const gotoAddressDetails = (addressIndex: number) => {
-    goto(`/account/addresses/${walletId}/detail/${addressIndex}`)
+    const id = walletId || accounts[0]?.wallet_id
+    if (id) {
+      goto(`/account/addresses/${id}/detail/${addressIndex}`)
+    }
   }
+
   const dispatch = createEventDispatcher()
   const selectAddress = (derived: Account) => {
     dispatch('select', derived)
   }
+
   const drawerStore = getDrawerStore()
-  const showPrivateKey = (derived: Account) => {
+  const showSecrets = (derived: Account) => {
     drawerStore.open({
       id: 'secret-show',
       position: 'bottom',
       meta: {
-        walletId,
+        walletId: walletId || derived.wallet_id,
         addressIndex: derived.address_index,
       },
     })
@@ -55,6 +112,7 @@
 
 <ol class="flex w-full flex-col gap-2">
   {#each accounts as derived}
+    {@const wallet = getWalletMetadata(walletId || derived.wallet_id)}
     <li class="flex w-full items-center justify-stretch rounded bg-white shadow">
       <Hover let:hovering>
         {@const selected = !!currentAddress && getAddress(currentAddress) === getAddress(derived.address)}
@@ -75,36 +133,45 @@
           <div class="flex flex-row items-center gap-2">
             <Select show={hovering || selected} color={hovering && !selected ? 'inactive' : 'success'} />
             {#if itemButtons.includes('showPK')}
-              <button
-                type="button"
-                class="variant-soft-primary size-8 rounded p-2"
-                on:click={() => showPrivateKey(derived)}>
-                <Icon icon="mdi:eye-lock-open-outline" />
-              </button>
-            {/if}
-            {#if itemButtons.includes('copy')}
-              <Copy text={derived.address} let:copy let:copied>
+              <div class="tooltip-wrapper">
                 <button
                   type="button"
-                  class="variant-soft-primary size-8 rounded p-2 px-2"
-                  on:click|stopPropagation={copy}>
-                  {#if copied}
-                    <Icon icon="icon-park-outline:file-success-one" height={12} width={12} />
-                  {:else}
-                    <Icon icon="fa:copy" height={12} width={12} />
-                  {/if}
+                  class="variant-soft-primary size-8 rounded p-2"
+                  on:click={() => showSecrets(derived)}>
+                  <Icon icon="mdi:eye-lock-open-outline" />
                 </button>
-              </Copy>
+                <div class="tooltip-text">Show Secrets</div>
+              </div>
+            {/if}
+            {#if itemButtons.includes('copy')}
+              <div class="tooltip-wrapper">
+                <Copy text={derived.address} let:copy let:copied>
+                  <button
+                    type="button"
+                    class="variant-soft-primary size-8 rounded p-2 px-2"
+                    on:click|stopPropagation={copy}>
+                    {#if copied}
+                      <Icon icon="icon-park-outline:file-success-one" height={12} width={12} />
+                    {:else}
+                      <Icon icon="fa:copy" height={12} width={12} />
+                    {/if}
+                  </button>
+                  <div class="tooltip-text">Copy Address</div>
+                </Copy>
+              </div>
             {/if}
           </div>
         </button>
       </Hover>
-      <button
-        type="button"
-        class="variant-filled-primary m-0 flex items-center justify-center rounded-r border-l p-3 hover:border-l"
-        on:click={() => gotoAddressDetails(derived.address_index)}>
-        <Icon icon="gravity-ui:circle-chevron-right" height={20} />
-      </button>
+      <div class="tooltip-wrapper">
+        <button
+          type="button"
+          class="variant-filled-primary m-0 flex items-center justify-center rounded-r border-l p-3 hover:border-l"
+          on:click={() => gotoAddressDetails(derived.address_index)}>
+          <Icon icon="gravity-ui:circle-chevron-right" height={20} />
+        </button>
+        <div class="tooltip-text">View Details</div>
+      </div>
     </li>
   {/each}
 </ol>

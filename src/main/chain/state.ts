@@ -39,7 +39,7 @@ handle('state:transaction:wait', async (chainId: ChainIds, hash: Hex) => {
   return await client.waitForTransactionReceipt({ hash })
 })
 
-handle('state:transactions', () => {
+handle('state:transactions', async () => {
   return sql.query.all<ChainTransaction>('ALL_TRANSACTIONS', [])
 })
 

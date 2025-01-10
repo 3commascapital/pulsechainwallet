@@ -73,6 +73,26 @@ VALUES (@hash, @chain_id, @action)
 ON CONFLICT (hash, chain_id) DO NOTHING`,
   ALL_TRANSACTIONS: /* sql */ `
 SELECT * FROM chain_transaction`,
+  /**
+   * Removes a wallet from the database
+   * @dev SQL query to delete a single wallet record
+   * @param id The unique identifier of the wallet to remove
+   * @notice This should be executed within a transaction with ACCOUNT_REMOVE_BY_WALLET
+   */
+  WALLET_REMOVE: /* sql */ `
+DELETE FROM wallet 
+WHERE id = @id`,
+
+  /**
+   * Removes all accounts belonging to a specific wallet
+   * @dev SQL query to clean up associated account records
+   * @param wallet_id The ID of the wallet whose accounts should be removed
+   * @notice Should be executed before WALLET_REMOVE to maintain referential integrity
+   * @notice Cascading delete might be preferable in schema design
+   */
+  ACCOUNT_REMOVE_BY_WALLET: /* sql */ `
+DELETE FROM account 
+WHERE wallet_id = @wallet_id`,
 }
 
 export const backendOnlyQueries = {

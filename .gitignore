@@ -5,3 +5,4 @@ out
 *.log*
 src/main/sql/migrations/bundle.json
 src/renderer/src/lib/svg/
+local_modules

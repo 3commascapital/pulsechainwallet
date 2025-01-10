@@ -19,6 +19,17 @@ import { config } from '$main/config'
 import { transactions } from '$main/sql/transactions'
 import _ from 'lodash'
 
+/**
+ * Direct type imports from msgboard module
+ * @dev These type aliases are added to:
+ * 1. Simplify imports throughout the application
+ * 2. Provide a single point of type definition maintenance
+ * 3. Allow for easier type modifications if msgboard structure changes
+ * 4. Unable to compile with previous code.
+ */
+type Message = msgboard.Message
+type Content = msgboard.Content
+
 const board = (chainId: ChainIds) => {
   const chain = chainIdToChain.get(chainId)
   if (!chain) {
@@ -205,13 +216,22 @@ const latestBlock = memoizeWithTTL(
   },
   10_000,
 )
+
+/**
+ * Retrieves message board content for a specific chain
+ * @param chainId - The ID of the blockchain network
+ * @returns Promise containing the message board content
+ * @throws Will throw if board for chainId doesn't exist
+ * @dev Uses non-null assertion as board() is expected to always return a value for valid chainIds
+ */
 const msgboardContents = memoizeWithTTL(
   (chainId: ChainIds) => chainId,
-  async (chainId: ChainIds) => {
+  async (chainId: ChainIds): Promise<Content> => {
     return board(chainId)!.content()
   },
   30_000,
 )
+
 const sortMap = <K extends string | number | bigint, V = unknown>(map: Map<K, V>) => {
   return new Map([...map.entries()].sort(([a], [b]) => (BigInt(toHex(a)) > BigInt(toHex(b)) ? 1 : -1)))
 }
@@ -429,9 +449,23 @@ handle('msgboard:pool:contents', async (chainId: ChainIds) => {
   const poolIds = pools.map((pool) => pool.id)
   const messages = Object.entries(content).filter(([poolId]) => poolIds.includes(poolId))
   const flattened = _(messages)
-    .flatMap(([, messages]) => Object.values(messages))
-    .sortBy([(m) => -m.blockNumber, (m) => m.hash])
-    .uniqBy((m) => {
+    /**
+     * Processes and sorts message board entries
+     * @dev Chain of operations that:
+     * 1. Flattens the message map into an array using flatMap
+     *    - Discards the key from [string, Record<string, Message>]
+     *    - Extracts only the Message objects using Object.values
+     * 2. Sorts messages by:
+     *    - Block number (descending) as primary sort
+     *    - Transaction hash as secondary sort
+     * 3. Removes duplicate messages based on transaction hash
+     *
+     * @notice The negative block number (-m.blockNumber) is used to sort in descending order
+     * @notice Lodash's sortBy maintains stable sort order for equal values
+     */
+    .flatMap(([, messages]: [string, Record<string, Message>]) => Object.values(messages))
+    .sortBy([(m: Message) => -m.blockNumber, (m: Message) => m.hash])
+    .uniqBy((m: Message) => {
       const {
         args: [parsedCalldata],
       } = verifyWithdrawal.decode(m.data)
@@ -439,7 +473,7 @@ handle('msgboard:pool:contents', async (chainId: ChainIds) => {
     })
     .reverse()
     .value()
-  // do more validation here later
+
   return {
     messages: flattened,
     pools,

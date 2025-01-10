@@ -1,3 +1,4 @@
+/* postcss-preset-env syntax */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,7 +15,6 @@
     --theme-font-family-heading: Quicksand, sans-serif;
   }
 }
-
 html {
   overflow: hidden;
   height: 100%;
@@ -44,7 +44,6 @@ body {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
-
 /* :root {
   --ev-c-white: #ffffff;
   --ev-c-white-soft: #f8f8f8;
@@ -89,7 +88,6 @@ body {
 ul {
   list-style: none;
 }
-
 body {
   min-height: 100vh;
   color: var(--color-text);
@@ -112,3 +110,83 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 } */
+
+/**
+ * Tooltip Component Styling
+ * @dev Core styles for tooltip functionality and appearance
+ * @notice All measurements use relative units for accessibility
+ */
+
+/**
+ * Tooltip Container
+ * @dev Establishes positioning context for tooltip
+ * @notice overflow:visible required for tooltip to show outside container
+ */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+}
+
+/**
+ * Tooltip Content
+ * @dev Core tooltip appearance and positioning
+ * @notice Uses CSS variables for theme consistency
+ * @custom-property --color-surface-900 Base text color
+ */
+.tooltip-text {
+  visibility: hidden;
+  background-color: #ede4f7;
+  color: rgb(var(--color-surface-900));
+  text-align: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 1;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  /* Transition handling for show/hide */
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0s linear 0.75s;
+  max-width: calc(100vw - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/**
+ * Right Edge Adjustment
+ * @dev Prevents tooltip from overflowing viewport right edge
+ * @notice Applies to last tooltip in a series
+ */
+.tooltip-wrapper:last-child .tooltip-text {
+  left: auto;
+  right: 0;
+  transform: translateX(0);
+}
+
+/**
+ * Left Edge Adjustment
+ * @dev Prevents tooltip from overflowing viewport left edge
+ * @notice Applies to first tooltip in a series
+ */
+.tooltip-wrapper:first-child .tooltip-text {
+  left: 0;
+  transform: translateX(0);
+}
+
+/**
+ * Hover State
+ * @dev Controls tooltip visibility on hover
+ * @notice Includes 0.75s delay for better UX
+ */
+.tooltip-wrapper:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0.75s;
+}

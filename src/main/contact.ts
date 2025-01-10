@@ -6,7 +6,7 @@ handle('contact:all', () => {
   return sql.query.all('CONTACT_ALL', [])
 })
 
-handle('contact:upsert', (contact: Contact) => {
+handle('contact:upsert', async (contact: Contact) => {
   sql.query.run('CONTACT_UPSERT', [contact])
   emit('contacts', sql.query.all('CONTACT_ALL', []))
 })
@@ -16,7 +16,7 @@ handle('contact:updateOne', (contact: Contact, name: string, note: string | null
   return sql.query.get('CONTACT_GET', [{ address: contact.address }])
 })
 
-handle('contact:remove', (contact: Contact) => {
+handle('contact:remove', async (contact: Contact) => {
   sql.query.run('CONTACT_REMOVE', [{ address: contact.address }])
   emit('contacts', sql.query.all('CONTACT_ALL', []))
 })

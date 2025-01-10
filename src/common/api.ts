@@ -24,6 +24,33 @@ import type { PathTypes } from '$common/path'
 import type { Proof } from '$common/pools'
 import type { SQLQueryKeys } from './sql'
 
+/**
+ * Result interface for wallet removal operations
+ * @dev Used to communicate the outcome of a wallet deletion request
+ * @notice This interface ensures consistent response structure across the application
+ */
+export interface WalletRemoveResult {
+  /**
+   * Operation success status
+   * @dev true if wallet was removed, false if operation failed
+   */
+  success: boolean
+
+  /**
+   * List of wallets remaining after removal
+   * @dev Contains metadata for all wallets still in the system
+   * @notice Used to update UI state after wallet removal
+   */
+  remainingWallets: WalletMetadata[]
+
+  /**
+   * Address of wallet that became active after removal
+   * @dev null if no wallets remain or if active wallet wasn't changed
+   * @notice Hex type ensures proper Ethereum address formatting
+   */
+  newActiveWallet: Hex | null
+}
+
 export interface API {
   'password:logout': () => boolean
   'password:login': (pass: string) => boolean
@@ -78,6 +105,15 @@ export interface API {
   ) => Hex
   'wallet:estimateGas': (chainId: ChainIds, input: SendTransactionParameters) => bigint
   'wallet:reveal': (pass: string, secret: Hex, index?: number) => string | false | null
+  /**
+   * Removes a wallet from the application
+   * @param id Ethereum address of the wallet to remove (in Hex format)
+   * @returns {WalletRemoveResult} Object containing operation result, remaining wallets, and new active wallet
+   * @dev This is an IPC endpoint for wallet removal operations
+   * @notice Will trigger UI updates through remainingWallets and newActiveWallet
+   * @throws If wallet doesn't exist or cannot be removed
+   */
+  'wallet:remove': (id: Hex) => WalletRemoveResult
 
   'pool:commitmentFromAccountSignature': (account: Account, chainId: ChainIds, poolAddress: Hex) => Hex | null
   'pool:generateProofsAndCache': (
@@ -128,9 +164,7 @@ export type HandlerFn<T extends keyof API> = (
   ...params: Parameters<API[T]>
 ) => Promise<ReturnType<API[T]>>
 
-export type DirectHandler<T extends keyof API> = (
-  ...params: Parameters<API[T]>
-) => Promise<ReturnType<API[T]>> | ReturnType<API[T]>
+export type DirectHandler<T extends keyof API> = (...params: Parameters<API[T]>) => Promise<ReturnType<API[T]>>
 
 export const handler =
   <T extends keyof API>(fn: DirectHandler<T>) =>

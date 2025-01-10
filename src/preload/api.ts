@@ -77,6 +77,23 @@ export const api = {
     updateAddedAccounts: proxy('wallet:updateAddedAccounts'),
     sendTransaction: proxy('wallet:sendTransaction'),
     estimateGas: proxy('wallet:estimateGas'),
+    /**
+     * Wallet removal IPC proxy
+     * @dev Exposes main process wallet removal functionality to renderer process
+     *
+     * @notice Uses proxy() to create type-safe IPC bridge:
+     * - Channel: 'wallet:remove'
+     * - Direction: renderer -> main
+     * - Type: (id: Hex) => WalletRemoveResult
+     *
+     * @example
+     * // In renderer process:
+     * const result = await window.api.wallet.remove(walletId)
+     *
+     * @see WalletRemoveResult for return type structure
+     * @see proxy() for IPC communication implementation
+     */
+    remove: proxy('wallet:remove'),
   },
   pool: {
     secretFromAccountSignature: proxy('pool:secretFromAccountSignature'),

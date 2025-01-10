@@ -31,6 +31,7 @@ import { config } from '$main/config'
 import { ChainIds } from '$common/config'
 import { handle } from '$main/ipc'
 import * as safe from '$main/safe'
+import { get } from 'svelte/store'
 
 type Wallet = WalletMetadata & {
   encrypted: Hex
@@ -82,7 +83,7 @@ export const methods = {
   all: async () => {
     return query.all<WalletMetadata>('WALLET_ALL', [])
   },
-  add: (secret: Hex | string, pathType: PathTypes) => {
+  add: async (secret: Hex | string, pathType: PathTypes) => {
     const isPK = pathType === PathTypes.UNKNOWN
     const pk = secret as Hex
     const phrase = secret as string
@@ -124,7 +125,7 @@ export const methods = {
     }
     return row.id
   },
-  update: (id: Hex, updates: UpdateableWalletMetadata) => {
+  update: async (id: Hex, updates: UpdateableWalletMetadata) => {
     query.run('WALLET_UPDATE', [{ id, name: updates.name }])
     return query.get<WalletMetadata>('WALLET_GET', [{ id }])
   },
@@ -166,13 +167,33 @@ export const methods = {
     const hdAccount = deriveAccountFromSecret($wallet.path_type, revealed, addressIndex) as HDAccount
     return toHex(hdAccount.getHdKey().privateKey!, { size: 32 })
   },
-  derive: (id: Hex, indices: number[]) => {
-    const $wallet = query.get<Wallet>('WALLET_GET', [id])
-    if (!$wallet) {
+  /**
+   * Derives addresses for given indices from a wallet's seed
+   * @dev Changes made:
+   * 1. Added async/await for future-proofing database operations
+   * 2. Improved parameter passing to WALLET_GET query using object notation
+   * 3. Renamed variable from $wallet to seed for clarity
+   *
+   * Before:
+   * derive: (id: Hex, indices: number[]) => {
+   *   const $wallet = query.get<Wallet>('WALLET_GET', [id])
+   *   if (!$wallet) return []
+   *   return indices.map((i) => deriveAddressFromSecret($wallet.path_type, safe.decrypt($wallet.encrypted), i))
+   * }
+   *
+   * @param id Hex address of the wallet to derive from
+   * @param indices Array of derivation path indices
+   * @returns Array of derived addresses
+   * @notice Query parameter now uses object notation for better maintainability
+   * @notice Removed commented-out ACCOUNT_GET query
+   * @throws If decryption fails or derivation is invalid
+   */
+  derive: async (id: Hex, indices: number[]) => {
+    const seed = query.get<Wallet>('WALLET_GET', [{ id }])
+    if (!seed) {
       return []
     }
-    return indices.map((i) => deriveAddressFromSecret($wallet.path_type, safe.decrypt($wallet.encrypted), i))
-    // return await query.all('ACCOUNT_GET', [walletIndex, indices])
+    return indices.map((i) => deriveAddressFromSecret(seed.path_type, safe.decrypt(seed.encrypted), i))
   },
   updateAddedAccounts: async (walletId: Hex, added: number[]) => {
     transactions.nullifyAndSetAdded(walletId, added)
@@ -221,6 +242,61 @@ export const methods = {
     const client = getPublicClient(chain)
     return client.estimateGas(input)
   },
+  /**
+   * Removes a wallet and its associated accounts from the system
+   * @dev Handles complete wallet deletion process including:
+   * 1. Account cleanup
+   * 2. Wallet removal
+   * 3. Configuration updates
+   * 4. Active wallet reassignment
+   *
+   * @param id Hex address of the wallet to remove
+   * @returns {Object} WalletRemoveResult containing:
+   *   - success: Always true if execution reaches return
+   *   - remainingWallets: List of wallets still in system
+   *   - newActiveWallet: First available wallet or null
+   *
+   * @notice Operations are performed in specific order to maintain data integrity
+   * @notice Configuration updates differ based on whether active wallet was removed
+   * @throws If database operations fail
+   */
+  remove: async (id: Hex) => {
+    // Remove all accounts associated with this wallet
+    query.run('ACCOUNT_REMOVE_BY_WALLET', [{ wallet_id: id }])
+
+    // Remove the wallet itself
+    query.run('WALLET_REMOVE', [{ id }])
+
+    // Get current configuration
+    const currentConfig = get(config)
+
+    // Get all remaining wallets
+    const remainingWallets = query.all<WalletMetadata>('WALLET_ALL', [])
+
+    /**
+     * @dev Handle configuration updates based on removed wallet
+     * @notice Two scenarios:
+     * 1. Removed active wallet: Update active wallet, reset index, update count
+     * 2. Removed inactive wallet: Only update total count
+     */
+    if (currentConfig.walletId === id) {
+      config.updatePartial({
+        walletId: remainingWallets[0]?.id || null,
+        addressIndex: 0,
+        walletCount: remainingWallets.length,
+      })
+    } else {
+      config.updatePartial({
+        walletCount: (currentConfig.walletCount || 1) - 1,
+      })
+    }
+
+    return {
+      success: true,
+      remainingWallets,
+      newActiveWallet: remainingWallets[0]?.id || null,
+    }
+  },
 } as const
 
 handle('wallet:all', methods.all)
@@ -249,6 +325,8 @@ handle('wallet:nonces', async (chainId, address) => {
   const chain = chainIdToChain.get(chainId)!
   return noncesFromAddress(getPublicClient(chain), address)
 })
+
+handle('wallet:remove', methods.remove)
 
 export const noncesFromAddress = async ($currentPublicClient: PublicClient, address: Hex) => {
   const [latest, pending] = await Promise.all([

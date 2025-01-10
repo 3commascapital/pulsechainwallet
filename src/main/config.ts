@@ -28,10 +28,10 @@ config.subscribe((c) => {
   emit('config:update', c)
 })
 
-handle('config:get', () => {
+handle('config:get', async () => {
   return get(config)
 })
-handle('config:set', <K extends Key, V = K extends '.' ? Partial<Config> : unknown>(k: K, value: V) => {
+handle('config:set', async <K extends Key, V = K extends '.' ? Partial<Config> : unknown>(k: K, value: V) => {
   if (k === null) {
     return
   }

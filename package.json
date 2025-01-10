@@ -1,6 +1,6 @@
 {
   "name": "pulsechainwallet",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "PulseChain Wallet",
   "main": "./out/main/index.js",
   "author": "PulseChain",
@@ -38,7 +38,7 @@
     "@ethersproject/solidity": "^5.7.0",
     "@floating-ui/dom": "^1.6.11",
     "@iconify/svelte": "^4.0.2",
-    "@pulsechain/msgboard": "^0.0.23",
+    "@pulsechain/msgboard": "file:./local_modules/@pulsechain/msgboard",
     "@skeletonlabs/skeleton": "^2.10.2",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.15",
@@ -109,5 +109,10 @@
     "vite-plugin-top-level-await-worker": "^1.4.9",
     "vite-plugin-wasm": "^3.3.0",
     "vite-tsconfig-paths": "^5.0.1"
-  }
+  },
+  "trustedDependencies": [
+    "@swc/core",
+    "better-sqlite3-multiple-ciphers",
+    "svelte-preprocess"
+  ]
 }

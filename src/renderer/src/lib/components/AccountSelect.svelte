@@ -43,10 +43,9 @@
   </div>
   {#if $config.walletId}
     <AccountList
-      walletId={$config.walletId}
-      currentAddress={current.address}
       accounts={$addedAccounts}
+      currentAddress={current.address}
       on:select={selectAddress}
-      itemButtons={['copy']} />
+      itemButtons={['showPK', 'copy']} />
   {/if}
 </div>

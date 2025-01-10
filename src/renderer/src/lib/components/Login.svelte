@@ -42,16 +42,14 @@
       placeholder="***"
       type="password"
       tabindex="0"
-      bind:value={pass}
-    />
+      bind:value={pass} />
 
     <div class="mt-4 grid grid-cols-2 gap-2">
       <BackButton
         cancelText="Reset"
         on:cancel={() => {
           push('/locked/restore')
-        }}
-      />
+        }} />
       <button type="submit" {disabled} class="variant-filled-primary btn">Login</button>
     </div>
   </form>
