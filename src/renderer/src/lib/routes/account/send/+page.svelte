@@ -7,6 +7,7 @@
   import Crumb from '$lib/components/Crumb.svelte'
   import { crumbs } from '$lib/navigation'
   import { emptyHex } from '$common/config'
+  import { defaultToAddressConstraints } from '$common/validation'
 
   let balance = 0n
   let amount = 0n
@@ -23,7 +24,7 @@
 
 <Crumb {...crumbs.send} />
 
-<SendTransaction let:updatePrep action="send">
+<SendTransaction let:updatePrep action="send" toAddressConstraints={defaultToAddressConstraints}>
   <!--
   bind all values here so that they are
   maintained as tabs are flipped back and forth

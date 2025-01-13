@@ -3,8 +3,8 @@
   import { type Hex, type SendTransactionParameters, isAddress } from 'viem'
   import { Tab, TabGroup } from '@skeletonlabs/skeleton'
   import { config } from '$lib/config'
-  import { wallet } from '$lib/api'
-
+  import { wallet, state } from '$lib/api'
+  import { chain } from '$lib/chain-state'
   import Prep from '$lib/components/transaction/Prep.svelte'
   import Pay from '$lib/components/transaction/Pay.svelte'
   import { loading } from '$lib/loading'
@@ -13,10 +13,14 @@
   import { currentAccount as account } from '$lib/wallets'
   import { onMount, tick } from 'svelte'
   import type { TransactionAction } from '$common/types'
-  import { emptyHex } from '$common/config'
+  import { emptyHex, type ChainIds } from '$common/config'
+  import { getMismatchedConstraints, type AddressConstraint, type AddressMetadata } from '$common/validation'
 
   export let action!: TransactionAction
   export let sendButtonText = 'Send'
+  let toAddressMetadata: AddressMetadata | null = null
+  export let toAddressConstraints: AddressConstraint = new Map()
+  let anyErrors = false
 
   export const updatePrep = async () => {
     await tick()
@@ -44,7 +48,19 @@
       }
       return inputs
     }, {} as Partial<PrepConfig>) as PrepConfig
-    // console.log([...formData.entries()], prep, prep.data?.length)
+    if (prep.to && toAddressConstraints.size) {
+      // check if it's a contract
+      anyErrors = true
+      state.addressInfo($chain!.id! as ChainIds, prep.to).then((res) => {
+        toAddressMetadata = res
+        if (res) {
+          const conflicts = getMismatchedConstraints(res, toAddressConstraints)
+          anyErrors = Array.from(conflicts.values()).some((mismatch) => mismatch === 'error')
+        }
+      })
+    } else {
+      anyErrors = false
+    }
   }
   const setToValue = (value: number) => {
     if (value < tabSet) {
@@ -85,7 +101,7 @@
 
   let hash: Hex = emptyHex
   let form!: HTMLFormElement
-  $: prepSubmitDisabled = !isAddress((prep?.to || '') as unknown as Hex)
+  $: prepSubmitDisabled = !isAddress((prep?.to || '') as unknown as Hex) || anyErrors
 </script>
 
 <div class="flex w-full px-4">
@@ -119,12 +135,14 @@
     <svelte:fragment slot="panel">
       {#if tabSet === 0}
         <div class="w-full">
-          <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-4 pb-4">
             <form bind:this={form} class="contents">
               <Prep
                 {sendButtonText}
                 account={$account}
                 disabled={prepSubmitDisabled}
+                {toAddressMetadata}
+                {toAddressConstraints}
                 on:submit={() => {
                   tabSet = 1
                 }}><slot {prep} {updatePrep} /></Prep>

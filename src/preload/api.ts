@@ -45,6 +45,7 @@ export const api = {
     block: proxy('state:block'),
     price: proxy('state:price'),
     balance: proxy('state:balance'),
+    addressInfo: proxy('state:addressInfo'),
   },
   indexer: {
     start: proxy('indexer:start'),
