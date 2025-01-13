@@ -17,7 +17,7 @@ const clearBeforeNow = (ttl: number, now: number, lastUpdated: Map<unknown, { ti
  */
 export const memoizeWithTTL = <K = unknown, Args extends unknown[] = [], Value = unknown>(
   createKey: (...args: Args) => K,
-  func: (...args: Args) => Value,
+  runner: (...args: Args) => Value,
   ttl: number,
 ) => {
   const lastUpdated = new Map<
@@ -37,7 +37,7 @@ export const memoizeWithTTL = <K = unknown, Args extends unknown[] = [], Value =
       // console.log('hit now=%o lastUpdate=%o ttl=%o', new Date(now), new Date(lastUpdate.timestamp), ttl)
       return lastUpdate.value
     }
-    const result = func(...args)
+    const result = runner(...args)
     lastUpdated.set(key, {
       value: result,
       timestamp: now,

@@ -130,3 +130,35 @@ handle('state:price', async (token: Erc20Token, blockNumber: BlockTag | bigint =
   const daiReserve = BigInt(reserves[daiIndex])
   return (daiReserve * parseUnits('1', decimals)) / tokenReserve
 })
+
+handle('state:addressInfo', async (chainId, address) => {
+  const chain = chainIdToChain.get(chainId)!
+  const publicClient = getPublicClient(chain)
+  const [code, callChecks] = await Promise.all([
+    publicClient.getCode({
+      address,
+    }),
+    publicClient.multicall({
+      allowFailure: true,
+      contracts: [
+        {
+          address,
+          abi: erc20Abi,
+          functionName: 'totalSupply',
+        },
+        {
+          address,
+          abi: erc20Abi,
+          functionName: 'decimals',
+        },
+      ],
+    }),
+  ])
+  const isContract = code !== '0x'
+  const isErc20 = callChecks.some((check) => check.status === 'success')
+
+  return new Map([
+    ['isContract', isContract],
+    ['isErc20', isErc20],
+  ] as const)
+})
